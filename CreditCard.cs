@@ -9,13 +9,19 @@ namespace kottans
     class CreditCard
     {
         static public bool IsCreditCardNumberValid(string card)
-        {
+        {        
             card = Clean(card);
-            return ((int)char.GetNumericValue(card[card.Length - 1]) == FindCheckDigit(GetTotalSum(card))) ? true : false;
+            bool resTF =  ((int)char.GetNumericValue(card[card.Length - 1]) == FindCheckDigit(GetTotalSum(card))) ? true : false;
+            if (resTF)
+            {
+                return GetCreditCardVendor(card) == "Unknown" ? false : true;
+            }
+            return false;
         }
         static public string GetCreditCardVendor(string card)
         {
             card = Clean(card);
+            if ((int)char.GetNumericValue(card[card.Length - 1]) != FindCheckDigit(GetTotalSum(card))) return "Unknown";
             int check = Convert.ToInt32(card.Remove(4));
             if ((check >= 3400 && check <= 3499) || (check >= 3700 && check <= 3799))
             {
@@ -41,6 +47,11 @@ namespace kottans
         }
         static public string GenerateNextCreditCardNumber(string card)
         {
+            if (!IsCreditCardNumberValid(card))
+            {
+                Console.WriteLine("Incorrect input. Your card returned.");
+                return card;
+            }
             card = Clean(card);
             ulong number;
             try
@@ -52,15 +63,26 @@ namespace kottans
                 Console.WriteLine("Incorrect input. Your card returned.");
                 return card;
             }
+            string currentVendor = GetCreditCardVendor(card);
+            number++;
             while (true)
             {
                 int checkDigit = FindCheckDigit(GetTotalSum(GenerateNewWithOldSize(number, card.Length)));
-                if ((int)(number % 10) < checkDigit)
+                if ((int)(number % 10) <= checkDigit)
                 {
-                    return GenerateNewWithOldSize(number + (ulong)(checkDigit - (int)(number % 10)), card.Length);
+                    string newCard = GenerateNewWithOldSize(number + (ulong)(checkDigit - (int)(number % 10)), card.Length);
+                    if (GetCreditCardVendor(newCard) == currentVendor) return newCard; else
+                    {
+                        Console.WriteLine("No more card numbers available for this vendor. Returned your card.");
+                        return card;
+                    }
                 }
                 number += (10 - number % 10);
-                number = (number < Math.Pow(10, card.Length)) ? number : 0; // to save input number's size
+                if (number >= Math.Pow(10, card.Length))
+                {
+                    Console.WriteLine("No more card numbers available for this vendor. Returned your card.");
+                    return card;
+                }
             }
         }
 
